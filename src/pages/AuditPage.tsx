@@ -17,38 +17,58 @@ const checkSteps = [
   "Готовим отчёт...",
 ];
 
+const TOTAL_DURATION = 5000; // 5 секунд
+const STEP_INTERVAL = TOTAL_DURATION / checkSteps.length;
+
+function isValidUrl(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.includes(".");
+}
+
 export default function AuditPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialUrl = searchParams.get("url") || "";
 
   const [url, setUrl] = useState(initialUrl);
-  const [phase, setPhase] = useState<"input" | "loading" | "done">(
-    initialUrl ? "loading" : "input"
+  const [urlError, setUrlError] = useState("");
+  const [phase, setPhase] = useState<"input" | "loading">(
+    initialUrl && isValidUrl(initialUrl) ? "loading" : "input"
   );
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    if (phase === "loading") {
-      let step = 0;
-      const stepInterval = setInterval(() => {
-        step += 1;
-        setCurrentStep(Math.min(step, checkSteps.length - 1));
-        setProgress(Math.min((step / checkSteps.length) * 100, 100));
-        if (step >= checkSteps.length) {
-          clearInterval(stepInterval);
-          setTimeout(() => {
-            navigate(`/report?url=${encodeURIComponent(url || initialUrl)}`);
-          }, 600);
-        }
-      }, 600);
-      return () => clearInterval(stepInterval);
-    }
+    if (phase !== "loading") return;
+
+    let step = 0;
+    const interval = setInterval(() => {
+      step += 1;
+      setCurrentStep(Math.min(step, checkSteps.length - 1));
+      setProgress(Math.min((step / checkSteps.length) * 100, 100));
+
+      if (step >= checkSteps.length) {
+        clearInterval(interval);
+        setTimeout(() => {
+          navigate(`/report?url=${encodeURIComponent(url || initialUrl)}`);
+        }, 400);
+      }
+    }, STEP_INTERVAL);
+
+    return () => clearInterval(interval);
   }, [phase]);
 
   const handleStart = () => {
-    if (!url.trim()) return;
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setUrlError("Введите адрес сайта");
+      return;
+    }
+    if (!isValidUrl(trimmed)) {
+      setUrlError("Введите корректный адрес, например: mysite.ru");
+      return;
+    }
+    setUrlError("");
     setPhase("loading");
   };
 
@@ -63,43 +83,45 @@ export default function AuditPage() {
               <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-6 glow-indigo">
                 <Icon name="Search" size={28} className="text-white" />
               </div>
-              <h1 className="text-4xl font-black text-foreground mb-3">
-                Аудит сайта
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Введите адрес сайта для анализа
-              </p>
+              <h1 className="text-4xl font-black text-foreground mb-3">Аудит сайта</h1>
+              <p className="text-muted-foreground text-lg">Введите адрес сайта для анализа</p>
             </div>
 
-            <div className="glass-strong rounded-2xl p-2">
+            <div className={`glass-strong rounded-2xl p-2 transition-all ${urlError ? "ring-1 ring-red-400/50" : ""}`}>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1 relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2">
                     <Icon name="Globe" size={18} className="text-muted-foreground" />
                   </div>
                   <input
-                    type="url"
+                    type="text"
                     value={url}
-                    onChange={(e) => setUrl(e.target.value)}
+                    onChange={(e) => { setUrl(e.target.value); setUrlError(""); }}
                     onKeyDown={(e) => e.key === "Enter" && handleStart()}
-                    placeholder="https://yoursite.ru"
+                    placeholder="mysite.ru или https://mysite.ru"
                     className="w-full bg-transparent pl-10 pr-4 py-4 text-foreground placeholder:text-muted-foreground outline-none text-base"
                     autoFocus
                   />
                 </div>
                 <button
                   onClick={handleStart}
-                  disabled={!url.trim()}
-                  className="gradient-bg text-white font-semibold px-8 py-4 rounded-xl hover:opacity-90 disabled:opacity-40 transition-all duration-200 shadow-lg whitespace-nowrap"
+                  className="gradient-bg text-white font-semibold px-8 py-4 rounded-xl hover:opacity-90 transition-all duration-200 shadow-lg whitespace-nowrap"
                 >
                   Запустить
                 </button>
               </div>
             </div>
 
+            {urlError && (
+              <div className="mt-2 flex items-center gap-2 text-red-400 text-sm animate-fade-in px-1">
+                <Icon name="AlertCircle" size={14} />
+                {urlError}
+              </div>
+            )}
+
             <div className="mt-6 grid grid-cols-3 gap-3 text-center">
               {[
-                { icon: "Zap", label: "30 секунд" },
+                { icon: "Zap", label: "5 секунд" },
                 { icon: "Shield", label: "Безопасно" },
                 { icon: "Gift", label: "Бесплатно" },
               ].map((item) => (
@@ -115,7 +137,6 @@ export default function AuditPage() {
         {phase === "loading" && (
           <div className="w-full max-w-lg text-center animate-scale-in">
             <div className="glass-strong rounded-3xl p-10">
-              {/* Animated logo */}
               <div className="relative w-24 h-24 mx-auto mb-8">
                 <div className="absolute inset-0 gradient-bg rounded-2xl animate-pulse-slow opacity-30 blur-xl" />
                 <div className="relative w-24 h-24 gradient-bg rounded-2xl flex items-center justify-center">
@@ -123,12 +144,12 @@ export default function AuditPage() {
                 </div>
               </div>
 
-              <h2 className="text-2xl font-black text-foreground mb-2">Анализируем сайт</h2>
+              <h2 className="text-2xl font-black text-foreground mb-1">Анализируем сайт</h2>
+              <p className="text-sm text-muted-foreground mb-5 truncate px-4">{url || initialUrl}</p>
               <p className="text-primary font-medium mb-8 min-h-[24px] transition-all duration-300">
                 {checkSteps[currentStep]}
               </p>
 
-              {/* Progress bar */}
               <div className="relative mb-4">
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
@@ -143,7 +164,6 @@ export default function AuditPage() {
                 <span>Готово</span>
               </div>
 
-              {/* Steps list */}
               <div className="text-left space-y-2">
                 {checkSteps.slice(0, Math.min(currentStep + 1, 8)).map((step, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm">

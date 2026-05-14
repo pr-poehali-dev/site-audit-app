@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Icon from "@/components/ui/icon";
@@ -48,6 +49,7 @@ const bonuses = [
 
 export default function PricingPage() {
   const navigate = useNavigate();
+  const [showPayStub, setShowPayStub] = useState(false);
 
   return (
     <div className="min-h-screen bg-background font-golos">
@@ -147,7 +149,7 @@ export default function PricingPage() {
             </ul>
 
             <button
-              onClick={() => navigate("/cabinet")}
+              onClick={() => setShowPayStub(true)}
               className="relative w-full py-3.5 rounded-xl gradient-bg text-white font-bold hover:opacity-90 transition-opacity shadow-lg glow-indigo"
             >
               Начать 7 дней бесплатно
@@ -204,6 +206,39 @@ export default function PricingPage() {
           </div>
         </div>
       </div>
+
+      {/* Payment stub modal */}
+      {showPayStub && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowPayStub(false)}
+        >
+          <div
+            className="glass-strong rounded-2xl p-8 max-w-sm w-full text-center animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-5 glow-indigo">
+              <Icon name="Sparkles" size={28} className="text-white" />
+            </div>
+            <h3 className="text-2xl font-black text-foreground mb-3">Спасибо за интерес!</h3>
+            <p className="text-muted-foreground leading-relaxed mb-6">
+              Оплата скоро будет подключена. Мы уведомим вас, когда Pro-тариф станет доступен.
+            </p>
+            <button
+              onClick={() => navigate("/contacts")}
+              className="w-full gradient-bg text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity mb-3"
+            >
+              Оставить заявку
+            </button>
+            <button
+              onClick={() => setShowPayStub(false)}
+              className="w-full py-3 rounded-xl text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
