@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "POST valid email",
+      "method": "POST",
+      "path": "/",
+      "body": {"email": "test@example.com", "source": "pricing"},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST invalid email",
+      "method": "POST",
+      "path": "/",
+      "body": {"email": "notanemail"},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial",
+      "expectedBody": {"error": "Укажите корректный email"}
+    },
+    {
+      "name": "GET leads list",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"leads": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

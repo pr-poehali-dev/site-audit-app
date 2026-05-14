@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Icon from "@/components/ui/icon";
+import { submitLead } from "@/hooks/useLeads";
 
 type Status = "ok" | "warn" | "error";
 
@@ -221,6 +222,24 @@ export default function ReportPage() {
   const [searchParams] = useSearchParams();
   const url = searchParams.get("url") || "example.ru";
   const [activeCheck, setActiveCheck] = useState<number | null>(null);
+
+  const [inlineEmail, setInlineEmail] = useState("");
+  const [inlineState, setInlineState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [inlineError, setInlineError] = useState("");
+
+  const handleInlineSubmit = async () => {
+    if (!inlineEmail.trim()) { setInlineError("Введите email"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inlineEmail)) { setInlineError("Некорректный email"); return; }
+    setInlineState("loading");
+    setInlineError("");
+    const result = await submitLead(inlineEmail, "report", url);
+    if (result.ok) {
+      setInlineState("done");
+    } else {
+      setInlineState("error");
+      setInlineError(result.error || "Ошибка");
+    }
+  };
 
   const { checks, totalScore } = useMemo(() => generateReport(url), [url]);
 
@@ -450,6 +469,66 @@ export default function ReportPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Inline email capture */}
+        <div className="rounded-2xl p-8 relative overflow-hidden mb-4" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))", border: "1px solid rgba(99,102,241,0.25)" }}>
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[150px] bg-indigo-600/8 rounded-full blur-[60px] pointer-events-none" />
+          <div className="relative">
+            {inlineState === "done" ? (
+              <div className="text-center py-4">
+                <div className="w-14 h-14 bg-emerald-400/15 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Icon name="CheckCircle" size={28} className="text-emerald-400" />
+                </div>
+                <h3 className="text-xl font-black text-foreground mb-2">Спасибо! Доступ активирован</h3>
+                <p className="text-muted-foreground text-sm">Проверьте почту — мы отправили инструкцию по активации Pro-версии.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="flex-1">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/15 text-primary text-xs font-medium mb-3">
+                    <Icon name="Mail" size={11} />
+                    Полные рекомендации и ТЗ
+                  </div>
+                  <h3 className="text-xl font-black text-foreground mb-1">Получите Pro-доступ на почту</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    Развёрнутые инструкции, примеры кода и ТЗ-генератор для каждого пункта отчёта
+                  </p>
+                </div>
+                <div className="w-full md:w-80 flex-shrink-0">
+                  <div className={`flex gap-2 ${inlineError ? "mb-1" : ""}`}>
+                    <input
+                      type="email"
+                      value={inlineEmail}
+                      onChange={(e) => { setInlineEmail(e.target.value); setInlineError(""); }}
+                      onKeyDown={(e) => e.key === "Enter" && handleInlineSubmit()}
+                      placeholder="your@email.ru"
+                      disabled={inlineState === "loading"}
+                      className={`flex-1 min-w-0 bg-muted/80 rounded-xl px-4 py-3 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground ${inlineError ? "ring-1 ring-red-400/60" : ""}`}
+                    />
+                    <button
+                      onClick={handleInlineSubmit}
+                      disabled={inlineState === "loading"}
+                      className="gradient-bg text-white font-semibold px-5 py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-opacity flex items-center gap-2 whitespace-nowrap text-sm"
+                    >
+                      {inlineState === "loading" ? (
+                        <Icon name="Loader2" size={16} className="animate-spin" />
+                      ) : (
+                        "Получить"
+                      )}
+                    </button>
+                  </div>
+                  {inlineError && (
+                    <p className="text-red-400 text-xs flex items-center gap-1">
+                      <Icon name="AlertCircle" size={11} />
+                      {inlineError}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">Без спама · Отписка в 1 клик</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Pro CTA */}

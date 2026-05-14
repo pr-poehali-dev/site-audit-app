@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Icon from "@/components/ui/icon";
+import { submitLead } from "@/hooks/useLeads";
 
 const freeFeatures = [
   { text: "3 аудита в месяц", ok: true },
@@ -50,6 +51,23 @@ const bonuses = [
 export default function PricingPage() {
   const navigate = useNavigate();
   const [showPayStub, setShowPayStub] = useState(false);
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadState, setLeadState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [leadError, setLeadError] = useState("");
+
+  const handleLeadSubmit = async () => {
+    if (!leadEmail.trim()) { setLeadError("Введите email"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadEmail)) { setLeadError("Некорректный email"); return; }
+    setLeadState("loading");
+    setLeadError("");
+    const result = await submitLead(leadEmail, "pricing");
+    if (result.ok) {
+      setLeadState("done");
+    } else {
+      setLeadState("error");
+      setLeadError(result.error || "Ошибка");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background font-golos">
@@ -207,35 +225,81 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* Payment stub modal */}
+      {/* Lead capture modal */}
       {showPayStub && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm animate-fade-in"
-          onClick={() => setShowPayStub(false)}
+          onClick={() => { setShowPayStub(false); setLeadState("idle"); setLeadEmail(""); setLeadError(""); }}
         >
           <div
-            className="glass-strong rounded-2xl p-8 max-w-sm w-full text-center animate-scale-in"
+            className="glass-strong rounded-2xl p-8 max-w-sm w-full animate-scale-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-5 glow-indigo">
-              <Icon name="Sparkles" size={28} className="text-white" />
-            </div>
-            <h3 className="text-2xl font-black text-foreground mb-3">Спасибо за интерес!</h3>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              Оплата скоро будет подключена. Мы уведомим вас, когда Pro-тариф станет доступен.
-            </p>
-            <button
-              onClick={() => navigate("/contacts")}
-              className="w-full gradient-bg text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity mb-3"
-            >
-              Оставить заявку
-            </button>
-            <button
-              onClick={() => setShowPayStub(false)}
-              className="w-full py-3 rounded-xl text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              Закрыть
-            </button>
+            {leadState === "done" ? (
+              <div className="text-center">
+                <div className="w-16 h-16 bg-emerald-400/15 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                  <Icon name="CheckCircle" size={32} className="text-emerald-400" />
+                </div>
+                <h3 className="text-2xl font-black text-foreground mb-3">Доступ активирован!</h3>
+                <p className="text-muted-foreground leading-relaxed mb-6">
+                  Проверьте почту — мы отправили инструкцию по активации Pro-доступа.
+                </p>
+                <button
+                  onClick={() => { setShowPayStub(false); setLeadState("idle"); setLeadEmail(""); }}
+                  className="w-full py-3 rounded-xl gradient-bg text-white font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Отлично!
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="w-14 h-14 gradient-bg rounded-2xl flex items-center justify-center mb-5 glow-indigo">
+                  <Icon name="Sparkles" size={26} className="text-white" />
+                </div>
+                <h3 className="text-xl font-black text-foreground mb-2">Активировать Pro-доступ</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                  Введите email — мы вышлем доступ к полному отчёту с рекомендациями, ТЗ-генератором и экспортом PDF.
+                </p>
+                <div className="mb-4">
+                  <input
+                    type="email"
+                    value={leadEmail}
+                    onChange={(e) => { setLeadEmail(e.target.value); setLeadError(""); }}
+                    onKeyDown={(e) => e.key === "Enter" && handleLeadSubmit()}
+                    placeholder="your@email.ru"
+                    className={`w-full bg-muted rounded-xl px-4 py-3 text-foreground outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground ${leadError ? "ring-1 ring-red-400/60" : ""}`}
+                    autoFocus
+                    disabled={leadState === "loading"}
+                  />
+                  {leadError && (
+                    <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <Icon name="AlertCircle" size={12} />
+                      {leadError}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={handleLeadSubmit}
+                  disabled={leadState === "loading"}
+                  className="w-full gradient-bg text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 transition-opacity flex items-center justify-center gap-2 mb-3"
+                >
+                  {leadState === "loading" ? (
+                    <><Icon name="Loader2" size={16} className="animate-spin" /> Отправляем...</>
+                  ) : (
+                    "Получить доступ"
+                  )}
+                </button>
+                <button
+                  onClick={() => { setShowPayStub(false); setLeadState("idle"); setLeadEmail(""); setLeadError(""); }}
+                  className="w-full py-2 rounded-xl text-muted-foreground hover:text-foreground text-sm transition-colors"
+                >
+                  Закрыть
+                </button>
+                <p className="text-center text-xs text-muted-foreground mt-3">
+                  7 дней бесплатно · Без спама · Отписка в 1 клик
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
