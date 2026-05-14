@@ -20,7 +20,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
+				'sans': ['Inter', 'system-ui', 'sans-serif'],
 				'golos': ['Golos Text', 'sans-serif'],
+				'inter': ['Inter', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
